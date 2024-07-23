@@ -6,7 +6,7 @@ source /environment.sh
 dt-launchfile-init
 
 # launch subscriber
-rosrun my_package objection_detection_node.py
+rosrun my_package Braitenberg_node.py
 
 # wait for app to end
 dt-launchfile-join
