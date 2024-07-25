@@ -9,6 +9,10 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
+# Import LEDPattern and ColorRGBA messages
+from duckietown_msgs.msg import LEDPattern
+from std_msgs.msg import ColorRGBA
+
 # Define HSV range for object detection (example values)
 lower_hsv = np.array([20, 100, 150])
 upper_hsv = np.array([40, 255, 255])
@@ -23,7 +27,13 @@ class ObjectDetectionNode(DTROS):
         self.vehicle_name = os.environ["VEHICLE_NAME"]
         self.image_topic = f"/{self.vehicle_name}/camera_node/image/compressed"
         self.twist_topic = f"/{self.vehicle_name}/car_cmd_switch_node/cmd"
-    
+        self.led_topic = f"/{self.vehicle_name}/led_emitter_node/led_pattern"  # Adjust based on your vehicle
+        
+        # Initialize LED control
+        self.led_pub = rospy.Publisher(self.led_topic, LEDPattern, queue_size=1)
+        self.led_segment = LedPatternSegment()
+
+        # Subscribe to camera image topic
         self.image_sub = rospy.Subscriber(self.image_topic, CompressedImage, self.image_callback)
         self.cmd_pub = rospy.Publisher(self.twist_topic, Twist2DStamped, queue_size=10)
 
@@ -45,6 +55,18 @@ class ObjectDetectionNode(DTROS):
         self.twist_msg.v = 0.0  # Stop the robot
         self.twist_msg.omega = 0.0
         self.cmd_pub.publish(self.twist_msg)
+
+        # Change LED color to indicate object detection
+        self.led_segment.color = (0, 255, 255)  # Set color to cyan (RGB: 0, 255,255)
+        self.led_segment.publish_led_pattern(self.led_pub)
+
+        # Sleep for 10 seconds
+        rospy.loginfo("Stopping for 10 seconds due to object detection...")
+        rospy.sleep(10.0)
+
+        # Restore LED to default color after stopping
+        self.led_segment.color = (255, 255, 255)  # Set back to default (white)
+        self.led_segment.publish_led_pattern(self.led_pub)
 
     def image_callback(self, msg):
         try:
@@ -90,6 +112,31 @@ class ObjectDetectionNode(DTROS):
         self.stop()  # Stop the robot explicitly
         rospy.sleep(0.5)  # Wait to ensure the stop command is received
         rospy.loginfo("Node shutdown complete")
+
+
+class LedPatternSegment:
+    def __init__(self, color=(255, 255, 255), brightness=100):
+        self.color = color  # RGB color tuple (default: white)
+        self.brightness = brightness  # Brightness level (default: 100%)
+
+    def publish_led_pattern(self, pub):
+        # Create LEDPattern message
+        led_msg = LEDPattern()
+
+        # Set RGB color values (assuming ColorRGBA format)
+        rgba = ColorRGBA()
+        rgba.r = self.color[0] / 255.0
+        rgba.g = self.color[1] / 255.0
+        rgba.b = self.color[2] / 255.0
+        rgba.a = self.brightness / 100.0
+
+        # Add the same color to all LEDs 
+        for _ in range(5):
+            led_msg.rgb_vals.append(rgba)
+
+        # Publish LEDPattern message
+        pub.publish(led_msg)
+        rospy.loginfo(f"Published LED pattern with color {self.color} and brightness {self.brightness}%")
 
 
 if __name__ == '__main__':

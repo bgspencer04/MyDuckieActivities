@@ -7,7 +7,7 @@ from duckietown_msgs.msg import WheelsCmdStamped
 
 
 # throttle and direction for each wheel
-THROTTLE_LEFT = 0.3        # 50% throttle
+THROTTLE_LEFT = 0.3        # 30% throttle
 DIRECTION_LEFT = 1         # forward
 THROTTLE_RIGHT = 0.3       # 30% throttle
 DIRECTION_RIGHT = 1       # forward
